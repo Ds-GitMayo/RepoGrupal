@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Definitiva: Merge y Pull Requests</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        <!-- Chosen Palette: Warm neutrals (Stone) for background, Teal for primary actions, Amber for warnings -->
+        <!-- Application Structure Plan: Tabbed interface separating Concepts, Workflow, and Conflicts. The Workflow uses an interactive stepper to guide the user sequentially through the phases without overwhelming them with text. This structure prioritizes step-by-step learning. -->
+        <!-- Visualization & Content Choices: Branching concept -> Canvas Diagram -> Visually demonstrates diverging and converging lines without SVG. Workflow -> Dynamic interactive stepper -> Connects commands with explanations. Conflicts -> Interactive terminal block -> Shows resolution syntax safely. -->
+        <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+        body {
+            background-color: #FAFAF9;
+            color: #1C1917;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+            border-radius: 0.5rem;
+            background-color: #F5F5F4;
+            border: 1px solid #E7E5E4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+        }
+        .code-block {
+            background-color: #292524;
+            color: #A3E635;
+            font-family: monospace;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+        .step-btn.active {
+            background-color: #0D9488;
+            color: white;
+            border-color: #0D9488;
+        }
+        .step-btn {
+            background-color: #F5F5F4;
+            color: #44403C;
+            border: 1px solid #D6D3D1;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-stone-200">
+        
+        <header class="bg-stone-900 text-stone-50 p-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4">🔀 Guía Definitiva: Merge y Pull Requests</h1>
+            <p class="text-lg text-stone-300 max-w-2xl mx-auto">En el mundo del desarrollo de software, las ramas (branches) te permiten trabajar de forma aislada. Descubre cómo unir ese trabajo al proyecto principal de forma segura.</p>
+        </header>
+
+        <nav class="flex border-b border-stone-200 bg-stone-50 overflow-x-auto whitespace-nowrap">
+            <button onclick="switchTab('conceptos')" id="btn-conceptos" class="flex-1 py-4 px-6 font-semibold text-stone-600 hover:text-teal-700 hover:bg-stone-100 focus:outline-none border-b-4 border-teal-600">1. Conceptos Base</button>
+            <button onclick="switchTab('flujo')" id="btn-flujo" class="flex-1 py-4 px-6 font-semibold text-stone-600 hover:text-teal-700 hover:bg-stone-100 focus:outline-none border-b-4 border-transparent">2. Flujo PR (Nube)</button>
+            <button onclick="switchTab('merge-local')" id="btn-merge-local" class="flex-1 py-4 px-6 font-semibold text-stone-600 hover:text-teal-700 hover:bg-stone-100 focus:outline-none border-b-4 border-transparent">3. Merge Local (Consola)</button>
+            <button onclick="switchTab('conflictos')" id="btn-conflictos" class="flex-1 py-4 px-6 font-semibold text-stone-600 hover:text-teal-700 hover:bg-stone-100 focus:outline-none border-b-4 border-transparent">4. Conflictos ⚠️</button>
+        </nav>
+
+        <main class="p-6 md:p-10">
+
+            <section id="conceptos" class="tab-content active">
+                <div class="mb-8">
+                    <p class="text-lg mb-4 text-stone-700">Esta sección establece las bases fundamentales. Entender la diferencia entre la acción técnica de unir código y el proceso social de revisión es clave para cualquier desarrollador.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="bg-stone-50 p-6 rounded-xl border border-stone-200 shadow-sm hover:shadow-md transition">
+                        <h2 class="text-2xl font-bold text-stone-800 mb-4">🌿 ¿Qué es un Merge?</h2>
+                        <p class="mb-4 text-stone-600">Un <strong>Merge</strong> (Fusión) es un comando de Git que une dos historiales de desarrollo independientes en uno solo. Toma los commits de tu rama secundaria y los inyecta en la principal.</p>
+                        <div class="bg-white p-4 rounded-lg border border-stone-200 mt-4">
+                            <span class="text-2xl block mb-2">🛣️ La Analogía:</span>
+                            <p class="text-sm text-stone-600">Imagina que el proyecto es una autopista principal (<code class="bg-stone-200 px-1 rounded">main</code>). Creas un desvío (rama <code class="bg-stone-200 px-1 rounded">feature</code>) para construir una gasolinera sin parar el tráfico. El <strong>Merge</strong> es conectar tu desvío de vuelta a la autopista.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-teal-50 p-6 rounded-xl border border-teal-100 shadow-sm hover:shadow-md transition">
+                        <h2 class="text-2xl font-bold text-teal-900 mb-4">☁️ ¿Qué es un Pull Request?</h2>
+                        <p class="mb-4 text-teal-800">Un <strong>PR</strong> no es un comando de Git. Es una funcionalidad de plataformas como GitHub o GitLab. Es una <strong>solicitud formal</strong> para que tu equipo revise y apruebe tu código antes de hacer Merge.</p>
+                        <ul class="space-y-3 mt-4">
+                            <li class="flex items-start">
+                                <span class="mr-2">🧐</span>
+                                <span class="text-sm text-teal-800"><strong>Code Review:</strong> Permite detectar errores y sugerir mejoras.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="mr-2">🛡️</span>
+                                <span class="text-sm text-teal-800"><strong>Seguridad:</strong> Evita subir código roto directamente a producción.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="mr-2">💬</span>
+                                <span class="text-sm text-teal-800"><strong>Discusión:</strong> Espacio para comentar sobre los cambios.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold text-stone-800 mb-4 text-center">Visualización del Flujo de Ramas</h3>
+                <div class="chart-container">
+                    <canvas id="gitCanvas"></canvas>
+                </div>
+            </section>
+
+            <section id="flujo" class="tab-content">
+                <div class="mb-8">
+                    <p class="text-lg mb-4 text-stone-700">Explora paso a paso cómo llevar tu código desde tu computadora local hasta la integración final en el servidor. Selecciona cada fase para ver las acciones necesarias.</p>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="w-full md:w-1/3 flex flex-col gap-3" id="stepper-buttons">
+                    </div>
+
+                    <div class="w-full md:w-2/3 bg-stone-50 p-6 md:p-8 rounded-xl border border-stone-200 min-h-[400px]">
+                        <h2 id="fase-title" class="text-2xl font-bold text-teal-800 mb-4"></h2>
+                        <p id="fase-desc" class="text-stone-600 mb-6 text-lg"></p>
+                        
+                        <div id="fase-steps" class="space-y-4 mb-6 text-stone-700">
+                        </div>
+
+                        <div id="fase-code-container" class="hidden">
+                            <h4 class="text-sm font-bold text-stone-500 uppercase tracking-wider mb-2">Terminal</h4>
+                            <div class="code-block" id="fase-code"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="merge-local" class="tab-content">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-4">💻 Cómo hacer un Merge local (por Consola)</h2>
+                    <p class="text-lg text-stone-700 mb-4">Aunque en equipos grandes se suelen usar <em>Pull Requests</em> en plataformas web, es fundamental saber cómo fusionar ramas directamente desde tu terminal utilizando comandos de Git. Esto es ideal para proyectos personales, para mantener ramas actualizadas o flujos de trabajo directos.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 class="text-xl font-bold text-teal-800 mb-4">El Proceso Paso a Paso</h3>
+                        <ol class="list-decimal list-inside space-y-5 text-stone-700">
+                            <li>
+                                <strong>Ubícate en la rama receptora:</strong>
+                                <p class="ml-5 text-sm text-stone-600 mt-1">Primero debes "pararte" en la rama que va a recibir los cambios. Normalmente esta es <code class="bg-stone-100 px-1 rounded text-teal-700">main</code> o <code class="bg-stone-100 px-1 rounded text-teal-700">develop</code>.</p>
+                            </li>
+                            <li>
+                                <strong>Actualiza tu rama local (Recomendado):</strong>
+                                <p class="ml-5 text-sm text-stone-600 mt-1">Asegúrate de descargar la última versión del servidor antes de fusionar para evitar problemas de sincronización.</p>
+                            </li>
+                            <li>
+                                <strong>Ejecuta el comando Merge:</strong>
+                                <p class="ml-5 text-sm text-stone-600 mt-1">Estando en la rama receptora, ejecuta la fusión indicando el nombre de la rama que tiene tu nuevo trabajo.</p>
+                            </li>
+                            <li>
+                                <strong>Sube y limpia (Opcional):</strong>
+                                <p class="ml-5 text-sm text-stone-600 mt-1">Envía tu rama principal actualizada al servidor y elimina tu rama de desarrollo localmente para mantener orden.</p>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-stone-900 rounded-xl overflow-hidden shadow-lg flex flex-col">
+                        <div class="bg-stone-800 px-4 py-2 flex justify-between items-center">
+                            <span class="text-stone-400 text-sm font-mono">Terminal (Ejemplo Práctico)</span>
+                            <div class="flex space-x-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                        </div>
+                        <div class="p-6 font-mono text-sm leading-relaxed overflow-x-auto flex-grow">
+                            <div class="text-stone-500 mb-1"># 1. Cambiamos a la rama principal receptora</div>
+                            <div class="text-green-400 mb-4">$ <span class="text-stone-200">git checkout main</span><br><span class="text-stone-400">Switched to branch 'main'</span></div>
+                            
+                            <div class="text-stone-500 mb-1"># 2. Descargamos lo último de la nube (por si acaso)</div>
+                            <div class="text-green-400 mb-4">$ <span class="text-stone-200">git pull origin main</span><br><span class="text-stone-400">Already up to date.</span></div>
+
+                            <div class="text-stone-500 mb-1"># 3. Traemos el código de nuestra otra rama hacia main</div>
+                            <div class="text-green-400 mb-4">$ <span class="text-stone-200">git merge feature/login</span><br><span class="text-stone-400">Updating 34b1a2c..f19e28d<br>Fast-forward<br> index.html | 15 +++++++++++++--<br> 1 file changed, 13 insertions(+), 2 deletions(-)</span></div>
+
+                            <div class="text-stone-500 mb-1"># 4. Enviamos a la nube y limpiamos localmente</div>
+                            <div class="text-green-400">$ <span class="text-stone-200">git push origin main</span></div>
+                            <div class="text-green-400">$ <span class="text-stone-200">git branch -d feature/login</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-teal-50 border-l-4 border-teal-500 p-6 rounded-r-xl">
+                    <h4 class="text-lg font-bold text-teal-900 mb-2 flex items-center"><span class="mr-2">💡</span> Tip: "Fast-Forward" vs "Merge Commit"</h4>
+                    <p class="text-teal-800 text-sm">Si nadie ha hecho cambios en <code class="bg-teal-100 px-1 rounded">main</code> mientras trabajabas en tu rama, Git hará un <strong>Fast-Forward</strong> (como se ve en la terminal: simplemente adelanta el puntero en el tiempo de manera lineal). Si hubo cambios en ambas ramas, Git creará automáticamente un <strong>Merge Commit</strong> para unir las dos historias de forma segura. ¡El comando a usar es el mismo para ambos casos!</p>
+                </div>
+            </section>
+
+            <section id="conflictos" class="tab-content">
+                <div class="bg-amber-50 border-l-4 border-amber-500 p-6 md:p-8 rounded-r-xl mb-8">
+                    <h2 class="text-2xl font-bold text-amber-900 mb-4 flex items-center">
+                        <span class="text-3xl mr-3">⚠️</span> ¿Y si hay Conflictos?
+                    </h2>
+                    <p class="text-lg text-amber-800 mb-4">A veces, al intentar hacer el Pull Request, GitHub te dirá <strong>"Can't automatically merge"</strong>. Esto ocurre cuando tú y otro compañero modificaron <strong>exactamente la misma línea del mismo archivo</strong>.</p>
+                    <p class="text-amber-800">Git no sabe qué versión es la correcta, así que pausa el proceso y te pide a ti (el humano) que resuelvas el conflicto.</p>
+                </div>
+
+                <div class="bg-stone-900 rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-stone-800 px-4 py-2 flex items-center">
+                        <span class="text-stone-400 text-sm font-mono">index.html - Resolviendo el conflicto</span>
+                    </div>
+                    <div class="p-6 font-mono text-sm md:text-base leading-relaxed">
+                        <div class="text-stone-300">
+                            &lt;div class="header"&gt;<br>
+                        </div>
+                        <div class="bg-teal-900/40 text-teal-300 p-2 border-l-2 border-teal-500 my-1">
+                            &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD (Lo que hay en main)<br>
+                            &nbsp;&nbsp;&lt;h1&gt;Bienvenido a nuestro Proyecto&lt;/h1&gt;
+                        </div>
+                        <div class="text-stone-500 p-2">
+                            ======= (El divisor)
+                        </div>
+                        <div class="bg-amber-900/40 text-amber-300 p-2 border-l-2 border-amber-500 my-1">
+                            &nbsp;&nbsp;&lt;h1&gt;Hola, Usuario. Bienvenido.&lt;/h1&gt;<br>
+                            &gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/nueva-seccion (Tus cambios)
+                        </div>
+                        <div class="text-stone-300">
+                            &lt;/div&gt;
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-white p-6 rounded-xl border border-stone-200">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4">Pasos para resolverlo:</h3>
+                    <ol class="list-decimal list-inside space-y-2 text-stone-600">
+                        <li>Abre el archivo conflictivo en tu editor de código.</li>
+                        <li>Elige qué código se queda (el tuyo, el de tu compañero, o una mezcla de ambos).</li>
+                        <li>Borra las marcas de conflicto generadas por Git (<code class="bg-stone-100 px-1"><<<<<<<</code>, <code class="bg-stone-100 px-1">=======</code>, <code class="bg-stone-100 px-1">>>>>>>></code>).</li>
+                        <li>Guarda el archivo.</li>
+                        <li>Ejecuta <code class="bg-stone-100 px-1 text-stone-800">git add .</code> y <code class="bg-stone-100 px-1 text-stone-800">git commit</code> para confirmar la resolución.</li>
+                        <li>Completa el Merge.</li>
+                    </ol>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const phases = [
+            {
+                id: 'fase1',
+                title: 'Fase 1: Enviar tu trabajo a la Nube',
+                desc: 'Antes de pedir que revisen tu código, tu código debe estar en Internet.',
+                steps: [
+                    'Asegúrate de haber guardado tus cambios localmente.',
+                    'Sube tu rama a GitHub desde la terminal.'
+                ],
+                code: `git add .\ngit commit -m "feat: termina la nueva sección de contacto"\n\ngit push origin feature/nueva-seccion`
+            },
+            {
+                id: 'fase2',
+                title: 'Fase 2: Crear el Pull Request',
+                desc: 'Ahora pasamos de la terminal al navegador web.',
+                steps: [
+                    'Ve a la página de tu repositorio en GitHub.',
+                    'Haz clic en el botón verde "Compare & pull request".',
+                    'Verifica que la base sea "main" y compare sea tu rama.',
+                    'Escribe un Título y Descripción claros.',
+                    'Haz clic en "Create pull request".'
+                ],
+                code: null
+            },
+            {
+                id: 'fase3',
+                title: 'Fase 3: La Revisión y el Merge',
+                desc: 'Tus compañeros leen tu código y te dejan comentarios. Una vez aprobado, procedes a la fusión.',
+                steps: [
+                    'Si no hay conflictos, verás un botón verde gigante.',
+                    'Haz clic en "Merge pull request".',
+                    'Haz clic en "Confirm merge".',
+                    'Opcional: Haz clic en "Delete branch" para mantener limpio el servidor.'
+                ],
+                code: null
+            },
+            {
+                id: 'fase4',
+                title: 'Fase 4: Sincronizar tu Computadora',
+                desc: 'Tu código ya se fusionó en Internet, pero tu PC local no lo sabe. Debes actualizarla y limpiar.',
+                steps: [
+                    'Vuelve a tu terminal y muévete a la rama principal.',
+                    'Descarga la versión actualizada.',
+                    'Borra la rama local en la que estabas trabajando.'
+                ],
+                code: `git checkout main\n\ngit pull origin main\n\ngit branch -d feature/nueva-seccion`
+            }
+        ];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('border-teal-600');
+                btn.classList.add('border-transparent');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.remove('border-transparent');
+            document.getElementById('btn-' + tabId).classList.add('border-teal-600');
+
+            if (tabId === 'conceptos') {
+                drawGitCanvas();
+            }
+        }
+
+        function loadPhase(index) {
+            const phase = phases[index];
+            document.getElementById('fase-title').innerText = phase.title;
+            document.getElementById('fase-desc').innerText = phase.desc;
+            
+            const stepsHtml = phase.steps.map((step, i) => 
+                `<div class="flex items-start"><span class="bg-teal-100 text-teal-800 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">${i+1}</span><p>${step}</p></div>`
+            ).join('');
+            document.getElementById('fase-steps').innerHTML = stepsHtml;
+
+            const codeContainer = document.getElementById('fase-code-container');
+            const codeBlock = document.getElementById('fase-code');
+            if (phase.code) {
+                codeBlock.innerText = phase.code;
+                codeContainer.classList.remove('hidden');
+            } else {
+                codeContainer.classList.add('hidden');
+            }
+
+            document.querySelectorAll('.step-btn').forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function renderStepper() {
+            const container = document.getElementById('stepper-buttons');
+            let html = '';
+            phases.forEach((phase, index) => {
+                html += `<button onclick="loadPhase(${index})" class="step-btn w-full text-left px-5 py-4 rounded-lg font-medium shadow-sm flex items-center justify-between"><span>Fase ${index + 1}</span> <span class="text-xl">➔</span></button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function drawGitCanvas() {
+            const canvas = document.getElementById('gitCanvas');
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const mainY = h * 0.7;
+            const featureY = h * 0.3;
+
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#57534E';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.1, mainY);
+            ctx.lineTo(w * 0.9, mainY);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#0D9488';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.3, mainY);
+            ctx.bezierCurveTo(w * 0.4, mainY, w * 0.4, featureY, w * 0.5, featureY);
+            ctx.lineTo(w * 0.7, featureY);
+            ctx.bezierCurveTo(w * 0.8, featureY, w * 0.8, mainY, w * 0.9, mainY);
+            ctx.stroke();
+
+            function drawNode(x, y, color, label) {
+                ctx.beginPath();
+                ctx.arc(x, y, 10, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#FFF';
+                ctx.stroke();
+                
+                ctx.fillStyle = '#44403C';
+                ctx.font = '14px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, y + 25);
+            }
+
+            drawNode(w * 0.2, mainY, '#57534E', 'Commit');
+            drawNode(w * 0.3, mainY, '#57534E', 'Branch');
+            drawNode(w * 0.5, featureY, '#0D9488', 'Commit');
+            drawNode(w * 0.7, featureY, '#0D9488', 'PR / Review');
+            drawNode(w * 0.9, mainY, '#EA580C', 'Merge');
+
+            ctx.fillStyle = '#A8A29E';
+            ctx.font = 'bold 16px system-ui';
+            ctx.textAlign = 'left';
+            ctx.fillText('main', 10, mainY + 5);
+
+            ctx.fillStyle = '#14B8A6';
+            ctx.fillText('feature/nueva-seccion', 10, featureY + 5);
+        }
+
+        window.addEventListener('resize', () => {
+            if (document.getElementById('conceptos').classList.contains('active')) {
+                drawGitCanvas();
+            }
+        });
+
+        renderStepper();
+        loadPhase(0);
+        drawGitCanvas();
+
+    </script>
+</body>
+</html>
